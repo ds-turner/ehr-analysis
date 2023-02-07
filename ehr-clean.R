@@ -2,7 +2,9 @@
 ## ehr-clean.R
 ##
 ## Define and extract an appropriate analysis dataset from artificial data 
-## based on CPRD GOLD format
+## based on CPRD GOLD format.  
+##
+## Please see readme file
 ###########################################################################
 
 # Load libraries ----------------------------------------------------------
