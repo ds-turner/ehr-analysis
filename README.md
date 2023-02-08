@@ -1,16 +1,21 @@
-# Example code for cleaning and analysing artificial electronic health records (EHRs) based on CPRD GOLD format. 
+# Example code for a mock retrospective cohort study using EHRs.
+
+## Introduction
+The following code was written to clean and analyse artificial data that follows a format similar to CPRD GOLD, as part of a mock retrospective cohort study.  The original data is not included in this repository but the analysis dataset is.  
+
+The mock study aimed to compare mortality among new users of proton pump inhibitors (PPIs) to new users of an alternative acid suppression drug, H2 receptor antagonists (H2RAs).  Hazard ratios were estimated using a multivariate Cox proportional hazard model.
 
 CPRD collects fully-coded patient level EHRs from GPs in the UK. Researches can access anonymised patient records that match the criteria of CPRD approved protocols.  Anonymised patient data is provided in 2 formats, CPRD GOLD and CPRD Aurum, depending on the system used to collect the data at the GP.  More information, including data specifications and data resource profiles can be found [here](https://cprd.com/primary-care-data-public-health-research)
 
 The following code was written to clean and analyse artificial data that follows a format similar to CPRD GOLD.  The original data is not included in this repository but the analysis dataset is.
 
-# Purpose of scripts
+## Purpose of scripts
 
 'ehr-clean.R' manipulates the raw data to produce the analysis dataset.  In brief it applies the inclusion/exclusion criteria of the study to inclued only patients that meet the criteria then it derives veriables to be included in the analyis.  To derive these variables codelists are sometimes used to identify information such as a diagnosis of a disease or prscreption of a medician.  It then saves a copy of the analysis dataset, that can be found in this respository.
 
 'ehr-analyse.R' loads the analysis dataset then fits a cox regression modle, checking the proportional hazard assumption and the correct for with which to fit the covariates
 
-# Mock study design
+## Mock study design
 
 ### Eligibility criteria:
 Patients whose records are held in the database, who have:
@@ -27,7 +32,7 @@ Patients whose records are held in the database, who have:
 
 ### Exposure
 
-Prescription for a PPI versus prescription for a H2RA.
+New prescription for a PPI compared to new prescriptions for a H2RA.
 
 ### Potential confounders:
 * Age
