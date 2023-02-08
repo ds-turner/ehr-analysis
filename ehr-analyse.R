@@ -6,22 +6,19 @@
 
 # Load libraries ----------------------------------------------------------
 
-library(ggthemes)
 library(tableone)
+library(sjPlot)
 library(survival)
 library(KMunicate)
 library(broom)
 library(survminer)
-library(ggmosaic)
 library(cobalt)
 library(survival)
 library(tidyverse)
-library(lmtest)
-
 
 # Plot theme --------------------------------------------------------------
 
-
+# set the theme for the plots
 theme_update(
   axis.title = element_text(),
   plot.caption = element_text(hjust = 0, vjust = 0),
@@ -53,11 +50,10 @@ analysis_data <- readRDS("analysis_data.rds")
 
 # Descriptive statistics and preliminary analysis -------------------------
 
-# checking the covariate balance between treatment groups.
-bal.tab(analysis_data, treat = analysis_data$ppi)
 
 
-bal.plot(analysis_data, treat = analysis_data$ppi)
+
+
 ## Follow-up duration ------------------------------------------------------
 
 analysis_data %>%
@@ -82,6 +78,40 @@ analysis_data %>%
   group_by(ppi) %>%
   summarise(min_followup = min(followup_dur),
             max_followup = max(followup_dur))
+
+
+# Covariate balance -------------------------------------------------------
+
+
+# checking the covariate balance between treatment groups.
+
+bal.tab(analysis_data, treat = analysis_data$ppi)
+
+# list of covariates
+covariates <- c(
+  "age",
+  "gender",
+  "eth5",
+  "imd_person",
+  "calendarperiod",
+  "bmi",
+  "nconsult",
+  "prior_diabetes",
+  "prior_gastric_cancer",
+  "recent_gerd",
+  "recent_peptic_ulcer"
+)
+
+# list of balance plots
+balance_plots <- lapply(covariates, function(x)
+  bal.plot(analysis_data, 
+           var.nam = x,
+           treat = analysis_data$ppi))
+# name list
+names(balance_plots) <- covariates
+
+# View plots
+plot_grid(balance_plots)
 
 # Plots
 p <- ggplot(analysis_data)
@@ -198,11 +228,13 @@ survdiff(surv_data ~ ppi,
 
 # Survival analysis: Cox regression ---------------------------------------
 
-## Inital assesment of the proportional hazard assumption ------------------
+# Using a multivariate cox model with the covariates included in the model
 
-## log log plot to assess if the proportional hazard assumption holds for the exposure
+## Initial assessment of the proportional hazard assumption ------------------
 
-# visual assesment using log-log plot
+## log-log plot to assess if the proportional hazard assumption holds for the exposure
+
+# visual assessment using log-log plot
 plot(
   survfit(surv_data ~ ppi,
           data = analysis_data),
@@ -228,11 +260,7 @@ legend(
       # treatment groups is constant over time and therefore the proportional 
       # hazard assumption holds for the treatment variable. 
 
-
-
-# Multivariable Cox model -------------------------------------------------
-
-## Assessing correct form of continuous variable --------------------------
+### Assessing correct form of continuous variable --------------------------
 ## Martingale residual plots
 ppi.cox.lin_assesment <- coxph(
   surv_data ~ age +
@@ -254,7 +282,7 @@ ggcoxfunctional(
   title = "Martingale Residuals"
 )
 
-      # untransformed forms of age and nconsult show signs of lineraty so will 
+      # untransformed forms of age and nconsult show signs of linearity so will 
       # be included in the model
 
 ## for BMI.  
@@ -274,9 +302,10 @@ ggcoxfunctional(
   point.alpha = 0.3,
   title = "Martingale Residuals"
 )
-
 # BMI did not show evidence of linearity untransformed or transformed so 
-# grouping BMI into factors
+# grouping BMI into factors that follow the standard groups of underweight, 
+# normal, overweight ans obese.
+
 analysis_data <- analysis_data %>%
   mutate(bmi_grp = case_when(
     bmi < 18.5 ~ "< 18.5",
@@ -288,10 +317,124 @@ analysis_data <- analysis_data %>%
                                          "25 - 30",
                                          "> 30"),
                      ordered = TRUE))
-levels(analysis_data$bmi_grp)
+
+### Potential Confounder analysis --------------------------------------------
+
+# Potential confounders assessed by estimating the association of the variate to 
+# the risk and the outcome.  No scientific judgment was made as part of this mock
+# study.
+
+# list of potential confounders
+covariates <- c(
+  "age",
+  "gender",
+  "eth5",
+  "imd_person",
+  "calendarperiod",
+  "bmi_grp",
+  "nconsult",
+  "prior_diabetes",
+  "prior_gastric_cancer",
+  "recent_gerd",
+  "recent_peptic_ulcer"
+)
+# List of the association of each covariate to ppi using logistic regression
+ppi.association <- lapply(covariates, function(x)
+  glm(
+    as.formula(paste("ppi", x, sep = "~")),
+    family = binomial(link = "logit"),
+    data = analysis_data
+  ))
+
+# name list
+names(ppi.association) <- covariates
+
+# tidy the results
+tidy.ppi.association <- lapply(covariates, function(x)
+  tidy(
+    ppi.association[[x]],
+    conf.int = TRUE,
+    exponentiate = TRUE
+  ))
+
+# name list
+names(tidy.ppi.association) <- covariates
+
+# List of the association of each covariate to death using logistic regression
+died.association <- lapply(covariates, function(x)
+  glm(
+    as.formula(paste("died", x, sep = "~")),
+    family = binomial(link = "logit"),
+    data = analysis_data
+  ))
+# name list
+names(died.association) <- covariates
+# tidy the results
+tidy.died.association <-lapply(covariates, function(x)
+  tidy(
+    died.association[[x]],
+    conf.int = TRUE,
+    exponentiate = TRUE
+  ))
+# name list
+names(tidy.died.association) <- covariates
+
+## likelihood ratio test
+
+## likelihood ratio test to obtain a p-value testing the hypothesis that each 
+## covariate is not associated with the probability of receiving a PPI prescription.
+
+lr.ppi <- lapply(covariates, function(x)
+  lrtest(
+    ppi.association[[x]],
+    glm(ppi ~ 1, data = drop_na(analysis_data, x), family = "binomial")
+  ))
+
+names(lr.ppi) <- covariates
+
+lr.ppi
+
+## likelihood ratio test to obtain a p-value testing the hypothesis that each 
+## covariate is not associated with the probability of death.
+
+lr.died <- lapply(covariates, function(x)
+  lrtest(
+    died.association[[x]],
+    glm(died ~ 1, data = drop_na(analysis_data, x), family = "binomial")
+  ))
+
+names(lr.died) <- covariates
 
 
-#### Fit 1 ---------
+## bind values into a dataframe
+# ppi association results
+lr.ppi_Chisq <-
+  sapply(covariates, function(x)
+    lr.ppi[[x]]$Chisq[2])
+lr.ppi_p_value <-
+  sapply(covariates, function(x)
+    lr.ppi[[x]]$`Pr(>Chisq)`[2])
+
+# death association results
+lr.died_Chisq <-
+  sapply(covariates, function(x)
+    lr.died[[x]]$Chisq[2])
+lr.died_p_value <-
+  sapply(covariates, function(x)
+    lr.died[[x]]$`Pr(>Chisq)`[2])
+
+# bind to data frame
+lr.values <- cbind(as.data.frame(lr.ppi_Chisq),
+                   as.data.frame(lr.ppi_p_value),
+                   as.data.frame(lr.died_Chisq),
+                   as.data.frame(lr.died_p_value)) %>%
+  arrange(lr.ppi_Chisq) %>%
+  round(4) 
+
+# Recent GERD and ethnicity show lack of evidence of association of either PPI 
+# prescription or of all cause mortality.  IMD shows lack of evidence of 
+# association of PPI prescriptions.  All 3 variables excluded from the analysis.
+## Fit One -----------------------------------------------------------------
 
 ## drop record's with missing BMI to perform complete case analysis
 analysis_data.cc <- drop_na(analysis_data, bmi)
@@ -300,6 +443,7 @@ analysis_data.cc <- drop_na(analysis_data, bmi)
 surv_data.2 <- Surv(time = analysis_data.cc$followup_dur,
                     event = analysis_data.cc$died)
 
+## fit cox model
 ppi.cox.multivarable.1 <- coxph(surv_data.2 ~ ppi +
                                   age +
                                   gender +
@@ -309,13 +453,14 @@ ppi.cox.multivarable.1 <- coxph(surv_data.2 ~ ppi +
                                   prior_diabetes +
                                   prior_gastric_cancer +
                                   recent_peptic_ulcer,
-                                data = analysis_data.cc
-)
+                                data = analysis_data.cc)
+
+## tidy to view results
 tidy(ppi.cox.multivarable.1,
      conf.int = TRUE,
      exponentiate = TRUE)
 
-###### Fit 1 Predicted survival curve ------
+### Fit 1 Predicted survival curve ------
 newdata.1 <- with(
   analysis_data,
   data.frame(
@@ -331,8 +476,10 @@ newdata.1 <- with(
     recent_peptic_ulcer = 0
   )
 )
+
 fit.1 <- survfit(ppi.cox.multivarable.1,
                  newdata = newdata.1)
+
 ## Plot predicted survival curve 
 ggsurvplot(
   fit.1,
@@ -348,9 +495,10 @@ pump inhibitors (PPI) and histamine H2-receptor antagonists (H2RA)",
   legend.labs = c("H2RA", "PPI"),
   legend = c(0.8, 0.8)
 )
-###### Fit 1 Assumptions checking #######################
-#
-###### Fit 1 Assessing linearity of covariates --------
+
+#### Fit 1 Assumptions checking #######################
+
+#### Fit 1 Assessing linearity of covariates --------
 ## Martingale residual plots
 par(mfrow = c(2,2), oma=c(0,0,2,0))
 # Age
@@ -376,6 +524,7 @@ plot(x = analysis_data.cc$nconsult,
      xlab = "Number of consultations in last year",
      ylab = "Martingale residuals",
      main = "Number of consultations in last year")
+
 lines(lowess(analysis_data.cc$nconsult, ppi.cox.multivarable.1$residuals),
       col = pal.538[2])
 # nconsult zoomed in
@@ -395,23 +544,15 @@ mtext("Plots of Martingale residuals against covariates",
       cex=2,
       adj = 0.5,
       padj = 0.5)
-#
-###### Fit 1 Proportional hazard assumption checking ---------------
+
+#### Fit 1 Proportional hazard assumption checking ---------------
 ## Schoenfeld plot
+
+# proportional hazards assumption test
 ph.fit.1 <- cox.zph(ppi.cox.multivarable.1, 
                     transform = "km") 
-ph.fit.1
 
-ggcoxzph(
-  ph.fit.1,
-  resid = T,
-  se = F,
-  point.col = cbf_pal[1],
-  point.size = 0.05,
-  point.shape = 19,
-  point.alpha = 0.1,
-)
-
+# plot the results
 par(mfrow = c(3,3), oma = c(0, 0, 2, 0))
 plot(
   ph.fit.1,
@@ -439,18 +580,13 @@ mtext(
   padj = 0.5
 )
 
+# The calendar period date showed some visual evidence of violating the 
+# proportional hazard assumption in the Schoenfeld Residuals test and plots.  
 
-###### Individuals for whom the model does not provide a good fit ---------------
-ggcoxdiagnostics(
-  ppi.cox.multivarable.1,
-  type = "deviance"
-)
-ggcoxdiagnostics(
-  ppi.cox.multivarable.1,
-  type = "dfbeta"
-)
+### Multivariable Fit 2 ----------
 
-#### Multivariable Fit 2 ----------
+# Stratified by the calendar period to avoid violation of the 
+# proportional hazard assumption.
 ppi.cox.multivarable.2 <- coxph(surv_data.2 ~ ppi +
                                   age +
                                   gender +
@@ -468,7 +604,7 @@ tidy(ppi.cox.multivarable.2,
 summary(ppi.cox.multivarable.1)
 summary(ppi.cox.multivarable.2)
 
-###### Fit 2 Proportional hazard assumption checking ---------------
+#### Fit 2 Proportional hazard assumption checking ---------------
 ## Schoenfeld plot
 ph.fit.2 <- cox.zph(ppi.cox.multivarable.2, 
                     transform = "km",
@@ -513,8 +649,10 @@ mtext(
   adj = 0.5,
   padj = 0.5
 )
-##
-###### Fit 2 Predicted survival curve ------
+
+#### Fit 2 Predicted survival curve ------
+
+# data for a stratified plot
 newdata.2 <- with(
   analysis_data,
   data.frame(
@@ -530,6 +668,7 @@ newdata.2 <- with(
     recent_peptic_ulcer = 0
   )
 )
+
 labs <- expand_grid(year = c("1991-1999", "2000-2004", "2005-2009", "2010-2014","2015-2017"), 
                     trt = c("H2RA", "PPI")) %>%
   mutate(labs = paste0(trt, " - ", year)) %>%
@@ -537,7 +676,7 @@ labs <- expand_grid(year = c("1991-1999", "2000-2004", "2005-2009", "2010-2014",
 
 fit.2 <- survfit(ppi.cox.multivarable.2, newdata = newdata.2)
 
-
+# stratified plot
 ggsurvplot(fit.2,
            data = analysis_data,
            censor = F,
@@ -552,6 +691,10 @@ pump inhibitors (PPI) and histamine H2-receptor antagonists (H2RA)",
            legend = c(0.15, 0.4)
 )
 
+# data for a 'Stratified Cox estimate of the survival curves of Female 
+# patients, with a bmi of 25 - 30, prescribed proton pump inhibitors 
+# (PPI) and histamine H2-receptor antagonists (H2RA) between 1991 and 
+# 1999 with no underlining conditions' plot
 newdata.3 <- with(
   analysis_data,
   data.frame(
@@ -568,6 +711,7 @@ newdata.3 <- with(
   )
 )
 
+# plot
 fit.3 <- survfit(ppi.cox.multivarable.2, newdata = newdata.3)
 table(analysis_data$bmi_grp)
 ggsurvplot(fit.3,
@@ -586,3 +730,6 @@ ggsurvplot(fit.3,
            legend.labs = c("H2RA", "PPI"),
            legend = c(0.15, 0.4)
 )
+
+
+
