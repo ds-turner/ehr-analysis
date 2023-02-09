@@ -1,6 +1,10 @@
 ###########################################################################
 ## ehr-analyse.R
-## Analysis of data extracted using the script 'ehr-clean.R'
+## 
+## Analysis of data extracted using the script 'ehr-clean.R'.
+## Inital descriptive analysis then fits a multivaritae Cox model to 
+## estimate the hazard ratio between treatment groups.
+##
 ## Author: David Turner
 ###########################################################################
 
