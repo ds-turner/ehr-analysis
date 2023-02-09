@@ -3,6 +3,9 @@
 ##
 ## Define and extract an appropriate analysis dataset from artificial data 
 ## based on CPRD GOLD format.  
+##  Applies the study inclusion/exclusion criteria to include only 
+##    patients that meet the criteria.
+##  Derives variables to be included in the analysis.
 ##
 ## Please see readme file
 ###########################################################################
