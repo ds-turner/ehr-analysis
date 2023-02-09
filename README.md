@@ -3,9 +3,9 @@
 ## Introduction
 The following code was written to clean and analyse artificial data that follows a format similar to CPRD GOLD, as part of a mock retrospective cohort study.  The original data is not included in this repository, but the analysis dataset is.  
 
-The mock study aimed to compare mortality among new users of proton pump inhibitors (PPIs) to new users of an alternative acid suppression drug, H2 receptor antagonists (H2RAs).  Hazard ratios were estimated using a multivariate Cox proportional hazard model.
+The mock study aimed to compare mortality among new users of proton pump inhibitors (PPIs) to new users of an alternative acid suppression drug, H2 receptor antagonists (H2RAs).  Hazard ratios were estimated by fitting a multivariate Cox proportional hazard model.
 
-CPRD collects fully coded patient level EHRs from GPs in the UK. Researchers can access anonymised patient records that match the criteria of CPRD approved protocols.  Anonymised patient data is provided in 2 formats, CPRD GOLD and CPRD Aurum, depending on the system used to collect the data at the GP.  More information, including data specifications and data resource profiles can be found [here](https://cprd.com/primary-care-data-public-health-research)
+CPRD collects fully coded patient level EHRs from GPs in the UK. Researchers can access anonymised patient records that match the criteria of CPRD approved protocols.  Anonymised patient data is provided in 2 formats, CPRD GOLD and CPRD Aurum, depending on the system used to collect the data at the GP.  More information, including data specifications and data resource profiles can be found [here](https://cprd.com/primary-care-data-public-health-research).
 
 ## Purpose of scripts
 
