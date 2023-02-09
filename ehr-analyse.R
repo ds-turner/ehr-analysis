@@ -665,7 +665,11 @@ newdata.2 <- with(
     gender = "Female",
     bmi_grp = "18.5 - 25",
     imd_person = "Least Deprived (1)",
-    calendarperiod = c("1991-1999", "1991-1999", "2000-2004", "2000-2004", "2005-2009", "2005-2009", "2010-2014","2010-2014", "2015-2017", "2015-2017"),
+    calendarperiod = c("1991-1999", "1991-1999", 
+                       "2000-2004", "2000-2004", 
+                       "2005-2009", "2005-2009", 
+                       "2010-2014", "2010-2014", 
+                       "2015-2017", "2015-2017"),
     nconsult = mean(nconsult, na.rm = TRUE),
     prior_diabetes = 0,
     prior_gastric_cancer = 0,
@@ -673,7 +677,9 @@ newdata.2 <- with(
   )
 )
 
-labs <- expand_grid(year = c("1991-1999", "2000-2004", "2005-2009", "2010-2014","2015-2017"), 
+labs <- expand_grid(year = c("1991-1999", "2000-2004", 
+                             "2005-2009", "2010-2014",
+                             "2015-2017"), 
                     trt = c("H2RA", "PPI")) %>%
   mutate(labs = paste0(trt, " - ", year)) %>%
   pull(labs)
